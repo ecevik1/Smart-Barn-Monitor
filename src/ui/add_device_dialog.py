@@ -48,12 +48,17 @@ class AddDeviceDialog(QDialog):
         self.spin_onvif.setRange(1, 65535)
         self.spin_onvif.setValue(80)
 
+        self.inp_rtsp_path = QLineEdit()
+        self.inp_rtsp_path.setText("/stream")
+        self.inp_rtsp_path.setPlaceholderText("Örn: /stream, /h264 vs.")
+
         form_layout.addRow("Kamera Adı:", self.inp_name)
         form_layout.addRow("IP Adresi:", self.inp_ip)
         form_layout.addRow("Kullanıcı Adı:", self.inp_user)
         form_layout.addRow("Şifre:", self.inp_pass)
         form_layout.addRow("RTSP Port:", self.spin_rtsp)
         form_layout.addRow("ONVIF Port:", self.spin_onvif)
+        form_layout.addRow("RTSP Yolu:", self.inp_rtsp_path)
 
         layout.addLayout(form_layout)
 
@@ -89,6 +94,7 @@ class AddDeviceDialog(QDialog):
             self.inp_pass.setText(device.get('password', ''))
             self.spin_rtsp.setValue(int(device.get('rtsp_port', 554)))
             self.spin_onvif.setValue(int(device.get('onvif_port', 80)))
+            self.inp_rtsp_path.setText(device.get('rtsp_path', '/stream'))
 
     def validate_inputs(self) -> dict:
         name = self.inp_name.text().strip()
@@ -96,8 +102,8 @@ class AddDeviceDialog(QDialog):
         user = self.inp_user.text().strip()
         pwd = self.inp_pass.text()
         
-        if not name or not ip or not user or not pwd:
-            QMessageBox.warning(self, "Eksik Bilgi", "Lütfen tüm alanları doldurun.")
+        if not name or not ip:
+            QMessageBox.warning(self, "Eksik Bilgi", "Kamera Adı ve IP Adresi zorunludur.")
             return None
         
         return {
@@ -106,7 +112,8 @@ class AddDeviceDialog(QDialog):
             "username": user,
             "password": pwd,
             "rtsp_port": self.spin_rtsp.value(),
-            "onvif_port": self.spin_onvif.value()
+            "onvif_port": self.spin_onvif.value(),
+            "rtsp_path": self.inp_rtsp_path.text()
         }
 
     def test_connection(self):

@@ -1,0 +1,22 @@
+[
+    {
+        "name": "Ahır VQA",
+        "ip": "192.168.1.200",
+        "username": "admin",
+        "password": "MTIzNDU2Nw==",
+        "rtsp_port": 8554,
+        "onvif_port": 80,
+        "rtsp_path": "/Streaming/Channels/101",
+        "id": "b0318953-1000-445b-b91b-cd418bab5079"
+    },
+    {
+        "name": "Ahır LQA",
+        "ip": "192.168.1.200",
+        "username": "admin",
+        "password": "MTIzNDU2Nw==",
+        "rtsp_port": 8554,
+        "onvif_port": 80,
+        "rtsp_path": "/Streaming/Channels/102",
+        "id": "03c12a67-1617-4e00-a3c9-030cec104ac8"
+    }
+]

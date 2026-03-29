@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-    QPushButton, QScrollArea, QLabel, QMessageBox
+    QPushButton, QScrollArea, QLabel, QMessageBox, QSplitter
 )
 from PyQt6.QtCore import Qt
 import sys
@@ -9,6 +9,7 @@ import os
 from src.ui.device_card import DeviceCard
 from src.ui.add_device_dialog import AddDeviceDialog
 from src.utils.config_manager import ConfigManager
+from src.ui.video_widget import VideoWidget
 
 # Custom Flow Layout for grid-like alignment that wraps
 # We could implement a real FlowLayout, but a grid or vertical list of grids is easier
@@ -50,9 +51,14 @@ class MainWindow(QMainWindow):
         
         self.layout_main.addLayout(header_layout)
 
-        # Scroll Area for Device Cards
+        # Splitter for Main Content
+        self.splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.layout_main.addWidget(self.splitter)
+
+        # Scroll Area for Device Cards (Left Side)
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
+        self.scroll.setMinimumWidth(320)
         
         self.scroll_widget = QWidget()
         # Instead of FlowLayout, let's use a VBox that holds HBoxes (Rows) for cards.
@@ -60,7 +66,16 @@ class MainWindow(QMainWindow):
         self.cards_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
         self.scroll.setWidget(self.scroll_widget)
-        self.layout_main.addWidget(self.scroll)
+        self.splitter.addWidget(self.scroll)
+
+        # Video Player Area (Right Side)
+        self.video_player = VideoWidget()
+        self.video_player.setMinimumWidth(450)
+        self.splitter.addWidget(self.video_player)
+
+        # Set stretch factors (Right side gets more space)
+        self.splitter.setStretchFactor(0, 1)
+        self.splitter.setStretchFactor(1, 3)
 
     def open_add_dialog(self, device_id=None):
         dialog = AddDeviceDialog(self, device_id=device_id)
@@ -91,8 +106,8 @@ class MainWindow(QMainWindow):
             self.cards_layout.addWidget(empty_lbl)
             return
 
-        # Simple grid system (e.g. 2 cards per row)
-        cards_per_row = 2
+        # Splitter is narrow, so display 1 card per row
+        cards_per_row = 1
         
         row_container = None
         for i, device in enumerate(devices):
@@ -118,14 +133,20 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Hata", "Cihaz silinemedi.")
 
     def connect_to_device(self, device_id):
-        # In this phase, we just show a message.
-        # Future phases will launch the stream.
         device = ConfigManager.get_device(device_id)
         if device:
-            rtsp_url = f"rtsp://{device.get('username')}:***@{device.get('ip')}:{device.get('rtsp_port')}/stream"
-            QMessageBox.information(
-                self, 
-                "Bağlantı Merkezi", 
-                f"Canlı İzleme modülü gelecekte eklenecek.\n(RTSP Bağlantısı Hazırlanıyor...)\n{rtsp_url}"
-            )
-
+            user = device.get('username', '')
+            pwd = device.get('password', '')
+            ip = device.get('ip', '')
+            port = device.get('rtsp_port', 554)
+            # Remove leading slash if user typed it, to prevent rtsp://user:pass@ip:port//stream
+            path = device.get('rtsp_path', '/stream').lstrip('/')
+            
+            if user and pwd:
+                rtsp_url = f"rtsp://{user}:{pwd}@{ip}:{port}/{path}"
+            elif user:
+                rtsp_url = f"rtsp://{user}@{ip}:{port}/{path}"
+            else:
+                rtsp_url = f"rtsp://{ip}:{port}/{path}"
+                
+            self.video_player.start_stream(rtsp_url)
