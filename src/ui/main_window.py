@@ -10,6 +10,8 @@ from src.ui.device_card import DeviceCard
 from src.ui.add_device_dialog import AddDeviceDialog
 from src.utils.config_manager import ConfigManager
 from src.ui.video_widget import VideoWidget
+from src.ui.ptz_panel import PTZPanel
+from src.utils.ptz_manager import PTZManager
 
 # Custom Flow Layout for grid-like alignment that wraps
 # We could implement a real FlowLayout, but a grid or vertical list of grids is easier
@@ -68,11 +70,20 @@ class MainWindow(QMainWindow):
         self.scroll.setWidget(self.scroll_widget)
         self.splitter.addWidget(self.scroll)
 
-        # Video Player Area (Right Side)
+        # Right Side Container (Video + PTZ)
+        self.right_container = QWidget()
+        right_layout = QHBoxLayout(self.right_container)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        
         self.video_player = VideoWidget()
         self.video_player.setMinimumWidth(450)
         self.video_player.fullscreen_toggled.connect(self.toggle_fullscreen)
-        self.splitter.addWidget(self.video_player)
+        right_layout.addWidget(self.video_player, stretch=1)
+        
+        self.ptz_panel = PTZPanel()
+        right_layout.addWidget(self.ptz_panel)
+        
+        self.splitter.addWidget(self.right_container)
 
         # Set stretch factors (Right side gets more space)
         self.splitter.setStretchFactor(0, 1)
@@ -86,10 +97,12 @@ class MainWindow(QMainWindow):
     def toggle_fullscreen(self, is_fullscreen: bool):
         if is_fullscreen:
             self.scroll.hide()
+            self.ptz_panel.hide()
             self.btn_add.hide()
             self.showFullScreen()
         else:
             self.scroll.show()
+            self.ptz_panel.show()
             self.btn_add.show()
             self.showNormal()
 
@@ -161,3 +174,24 @@ class MainWindow(QMainWindow):
                 rtsp_url = f"rtsp://{ip}:{port}/{path}"
                 
             self.video_player.start_stream(rtsp_url)
+            
+            # Setup PTZ
+            if hasattr(self, 'ptz_manager') and self.ptz_manager:
+                try:
+                    self.ptz_panel.move_requested.disconnect()
+                    self.ptz_panel.stop_requested.disconnect()
+                    self.ptz_panel.goto_preset_requested.disconnect()
+                    self.ptz_panel.set_preset_requested.disconnect()
+                except Exception:
+                    pass
+            
+            onvif_port = int(device.get('onvif_port', 80))
+            self.ptz_manager = PTZManager(ip, onvif_port, user, pwd)
+            self.ptz_manager.connection_status_signal.connect(self.ptz_panel.set_active)
+            self.ptz_panel.move_requested.connect(self.ptz_manager.continuous_move)
+            self.ptz_panel.stop_requested.connect(self.ptz_manager.stop)
+            self.ptz_panel.goto_preset_requested.connect(self.ptz_manager.goto_preset)
+            self.ptz_panel.set_preset_requested.connect(lambda p: self.ptz_manager.set_preset(f"P{p}", p))
+            
+            self.ptz_panel.set_active(False, "Bağlanılıyor...")
+            self.ptz_manager.connect_async()

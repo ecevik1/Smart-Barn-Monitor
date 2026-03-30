@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar, QSlider, QHBoxLayout, QPushButton
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar, QSlider, QHBoxLayout, QPushButton, QSizePolicy
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QPixmap, QImage, QFont
 from src.utils.video_thread import VideoThread
@@ -31,6 +31,7 @@ class VideoWidget(QWidget):
         # Image Label (Background black)
         self.image_label = QLabel("Kamera seçmek için lütfen sol taraftaki listeden 'Bağlan'a tıklayın")
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
         self.image_label.setStyleSheet("background-color: #000000; color: #aaaaaa; font-size: 18px; font-weight: bold;")
         
         # Create overlay warning label inside image_label
