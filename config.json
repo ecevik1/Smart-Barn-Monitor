@@ -1,7 +1,7 @@
 [
     {
         "name": "Ahır VQA",
-        "ip": "192.168.1.200",
+        "ip": "192.168.1.184",
         "username": "admin",
         "password": "MTIzNDU2Nw==",
         "rtsp_port": 8554,
@@ -11,12 +11,12 @@
     },
     {
         "name": "Ahır LQA",
-        "ip": "192.168.1.200",
+        "ip": "192.168.1.184",
         "username": "admin",
         "password": "MTIzNDU2Nw==",
         "rtsp_port": 8554,
         "onvif_port": 80,
         "rtsp_path": "/Streaming/Channels/102",
-        "id": "03c12a67-1617-4e00-a3c9-030cec104ac8"
+        "id": "9c864cfc-b419-48c7-8d07-81a37c48c823"
     }
 ]

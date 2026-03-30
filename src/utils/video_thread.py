@@ -1,3 +1,9 @@
+import os
+
+# Reduce stream connection and analysis timeout (stimeout in microseconds/5 seconds)
+# This prevents the UI from waiting ~30s for a dead stream to fail.
+os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "timeout;5000|stimeout;5000000|analyzeduration;1000000|probesize;1000000"
+
 import cv2
 import time
 from PyQt6.QtCore import QThread, pyqtSignal
@@ -52,7 +58,8 @@ class VideoThread(QThread):
         bytes_per_line = ch * w
         # Keep aspect ratio dynamically later on UI, convert to generic QImage here
         converted_format = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
-        return converted_format
+        # return .copy() is extremely important, otherwise rgb_image memory is freed and accessing QImage later causes crash
+        return converted_format.copy()
 
     def stop(self):
         self._run_flag = False
