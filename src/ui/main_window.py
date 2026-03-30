@@ -71,6 +71,7 @@ class MainWindow(QMainWindow):
         # Video Player Area (Right Side)
         self.video_player = VideoWidget()
         self.video_player.setMinimumWidth(450)
+        self.video_player.fullscreen_toggled.connect(self.toggle_fullscreen)
         self.splitter.addWidget(self.video_player)
 
         # Set stretch factors (Right side gets more space)
@@ -81,6 +82,16 @@ class MainWindow(QMainWindow):
         dialog = AddDeviceDialog(self, device_id=device_id)
         if dialog.exec():
             self.load_devices() # Refresh list if saved
+
+    def toggle_fullscreen(self, is_fullscreen: bool):
+        if is_fullscreen:
+            self.scroll.hide()
+            self.btn_add.hide()
+            self.showFullScreen()
+        else:
+            self.scroll.show()
+            self.btn_add.show()
+            self.showNormal()
 
     def load_devices(self):
         # Clear existing cards
