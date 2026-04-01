@@ -40,8 +40,6 @@ class VideoThread(QThread):
                     # Görüntüyü BGR'dan RGB'ye çevir
                     qt_img = self.convert_cv_qt(cv_img)
                     self.change_pixmap_signal.emit(qt_img)
-                    # 25 FPS = saniyede 1/25 = 0.04 ms
-                    time.sleep(0.04)
                 else:
                     self.status_signal.emit("Sinyal Yok, Yeniden Bağlanılıyor...")
                     break # Döngüden çık, yukarıdan tekrar VideoCapture başlatsın

@@ -57,11 +57,12 @@ class AudioProcessor(QThread):
                 
                 stream = audio_streams[0]
                 
-                for frame in container.decode(stream):
-                    if not self._run_flag:
-                        break
-                        
-                    now = time.time()
+                try:
+                    for frame in container.decode(stream):
+                        if not self._run_flag:
+                            break
+                            
+                        now = time.time()
                     
                     # 1. Check Cooldown
                     if now < self.cooldown_until:
@@ -144,6 +145,9 @@ class AudioProcessor(QThread):
                         self.moo_timestamps.clear()
                         # Apply default cooldown so it doesn't immediately listen to the alarm
                         self.set_cooldown(10)
+                finally:
+                    if 'container' in locals() and container is not None:
+                        container.close()
 
             except Exception as e:
                 # Connection dropped or timeout

@@ -8,7 +8,21 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
 from src.ui.main_window import MainWindow
 from src.ui.theme import DARK_THEME_QSS
+import traceback
 import os
+
+def global_exception_handler(exctype, value, tb):
+    traceback_str = ''.join(traceback.format_exception(exctype, value, tb))
+    print("Unhandled exception:\\n", traceback_str)
+    try:
+        with open("crash_log.txt", "a", encoding="utf-8") as f:
+            f.write("Kritik Hata (Crash):\\n" + traceback_str + "\\n")
+    except:
+        pass
+    sys.__excepthook__(exctype, value, tb)
+    sys.exit(1)
+
+sys.excepthook = global_exception_handler
 
 def main():
     # Setup App Data path if we needed it, but using config.json locally
