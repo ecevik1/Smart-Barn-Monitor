@@ -124,7 +124,7 @@ class VideoWidget(QWidget):
         pixmap = QPixmap.fromImage(qt_image)
         scaled_pixmap = pixmap.scaled(
             self.image_label.size(), 
-            Qt.AspectRatioMode.KeepAspectRatio, 
+            Qt.AspectRatioMode.KeepAspectRatioByExpanding, 
             Qt.TransformationMode.SmoothTransformation
         )
         self.image_label.setPixmap(scaled_pixmap)
@@ -195,6 +195,13 @@ class VideoWidget(QWidget):
 
     def mouseDoubleClickEvent(self, event):
         self.is_fullscreen = not self.is_fullscreen
+        
+        if self.is_fullscreen:
+            self.audio_panel.hide()
+        else:
+            if self.thread is not None:
+                self.audio_panel.show()
+                
         self.fullscreen_toggled.emit(self.is_fullscreen)
 
     def closeEvent(self, event):

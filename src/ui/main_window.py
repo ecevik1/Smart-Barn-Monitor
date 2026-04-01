@@ -38,24 +38,27 @@ class MainWindow(QMainWindow):
         self.layout_main.setSpacing(20)
 
         # Header Bar
-        header_layout = QHBoxLayout()
-        title = QLabel("Smart Barn Monitor")
-        title.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
+        self.header_widget = QWidget()
+        header_layout = QHBoxLayout(self.header_widget)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.title_label = QLabel("Smart Barn Monitor")
+        self.title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
         
         self.btn_add = QPushButton("+ Yeni Cihaz Ekle")
         self.btn_add.setObjectName("primaryButton")
         self.btn_add.setFixedSize(180, 40)
         self.btn_add.clicked.connect(self.open_add_dialog)
         
-        header_layout.addWidget(title)
+        header_layout.addWidget(self.title_label)
         header_layout.addStretch()
         header_layout.addWidget(self.btn_add)
         
-        self.layout_main.addLayout(header_layout)
+        self.layout_main.addWidget(self.header_widget)
 
         # Splitter for Main Content
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.layout_main.addWidget(self.splitter)
+        self.layout_main.addWidget(self.splitter, stretch=1)
 
         # Scroll Area for Device Cards (Left Side)
         self.scroll = QScrollArea()
@@ -96,14 +99,15 @@ class MainWindow(QMainWindow):
 
     def toggle_fullscreen(self, is_fullscreen: bool):
         if is_fullscreen:
+            self.header_widget.hide()
             self.scroll.hide()
-            self.ptz_panel.hide()
-            self.btn_add.hide()
+            # PTZ panel kalıyor!
+            self.layout_main.setContentsMargins(0, 0, 0, 0) # Remove margins for true fullscreen
             self.showFullScreen()
         else:
+            self.header_widget.show()
             self.scroll.show()
-            self.ptz_panel.show()
-            self.btn_add.show()
+            self.layout_main.setContentsMargins(20, 20, 20, 20) # Restore margins
             self.showNormal()
 
     def load_devices(self):
