@@ -1,0 +1,18 @@
+{
+    "devices": [
+        {
+            "id": "",
+            "name": "",
+            "ip": "",
+            "username": "",
+            "password": "",
+            "rtsp_port": 554,
+            "onvif_port": 80,
+            "rtsp_path": "/stream"
+        }
+    ],
+    "telegram": {
+        "bot_token": "",
+        "chat_id": ""
+    }
+}

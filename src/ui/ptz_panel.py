@@ -142,11 +142,9 @@ class PTZPanel(QWidget):
         if self.btn_save_mode.isChecked():
             self.set_preset_requested.emit(idx)
             self.btn_save_mode.setChecked(False) # Turn off after saving
-            print(f"Preset {idx} saved.")
             QMessageBox.information(self, "Bilgi", f"Pozisyon Ön Ayar {idx} olarak kaydedildi.")
         else:
             self.goto_preset_requested.emit(idx)
-            print(f"Going to preset {idx}.")
 
     def set_active(self, active: bool, msg: str = ""):
         self.setEnabled(active)

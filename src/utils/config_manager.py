@@ -8,40 +8,79 @@ CONFIG_FILE = "config.json"
 
 class ConfigManager:
     @staticmethod
-    def load_config() -> List[Dict]:
-        if not os.path.exists(CONFIG_FILE):
-            return []
+    def load_full_config() -> Dict:
+        default_config = {
+            "devices": [],
+            "telegram": {"bot_token": "", "chat_id": ""}
+        }
         
+        if not os.path.exists(CONFIG_FILE):
+            return default_config
+            
         try:
             with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                # Decode passwords before returning
-                for device in data:
-                    if 'password' in device:
-                        device['password'] = decode_password(device['password'])
-                return data
+                
+            # MIGRATION: Old format was a list of devices
+            if isinstance(data, list):
+                migrated_config = default_config.copy()
+                migrated_config["devices"] = data
+                data = migrated_config
+                
+            # Ensure keys exist
+            if "devices" not in data: data["devices"] = []
+            if "telegram" not in data: data["telegram"] = {"bot_token": "", "chat_id": ""}
+            
+            return data
         except Exception as e:
-            print(f"Error loading config: {e}")
-            return []
+            print(f"Error loading full config: {e}")
+            return default_config
 
     @staticmethod
-    def save_config(data: List[Dict]) -> bool:
+    def save_full_config(data: Dict) -> bool:
         try:
-            # We must encode passwords before writing them to file
-            # Make a copy to avoid altering the running state
-            data_to_save = []
-            for device in data:
-                device_copy = device.copy()
-                if 'password' in device_copy:
-                    device_copy['password'] = encode_password(device_copy['password'])
-                data_to_save.append(device_copy)
-
             with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-                json.dump(data_to_save, f, indent=4, ensure_ascii=False)
+                json.dump(data, f, indent=4, ensure_ascii=False)
             return True
         except Exception as e:
-            print(f"Error saving config: {e}")
+            print(f"Error saving full config: {e}")
             return False
+
+    @staticmethod
+    def load_config() -> List[Dict]:
+        full_config = ConfigManager.load_full_config()
+        devices = full_config["devices"]
+        
+        # Decode passwords before returning
+        for device in devices:
+            if 'password' in device:
+                device['password'] = decode_password(device['password'])
+        return devices
+
+    @staticmethod
+    def save_config(devices: List[Dict]) -> bool:
+        full_config = ConfigManager.load_full_config()
+        
+        data_to_save = []
+        for device in devices:
+            device_copy = device.copy()
+            if 'password' in device_copy:
+                device_copy['password'] = encode_password(device_copy['password'])
+            data_to_save.append(device_copy)
+            
+        full_config["devices"] = data_to_save
+        return ConfigManager.save_full_config(full_config)
+        
+    @staticmethod
+    def get_telegram_config() -> Dict:
+        return ConfigManager.load_full_config()["telegram"]
+        
+    @staticmethod
+    def save_telegram_config(bot_token: str, chat_id: str) -> bool:
+        full_config = ConfigManager.load_full_config()
+        full_config["telegram"]["bot_token"] = bot_token
+        full_config["telegram"]["chat_id"] = chat_id
+        return ConfigManager.save_full_config(full_config)
 
     @staticmethod
     def add_device(device_info: Dict) -> bool:
