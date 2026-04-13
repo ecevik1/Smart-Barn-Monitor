@@ -7,10 +7,13 @@ site_packages = [p for p in site.getsitepackages() if 'site-packages' in p][0]
 wsdl_path = os.path.join(site_packages, 'wsdl')
 
 PyInstaller.__main__.run([
-    'src/main.py',
-    '--name=Smart Barn Monitor',
+    'main.py',
+    '--name=Barn Monitor v1.2',
     '--windowed',
+    '--onedir', 
     '--noconfirm',
-    '--onefile',
+    '--clean',
+    '--icon=assets/icon.png',
+    '--add-data=assets;assets',
     f'--add-data={wsdl_path};wsdl'
 ])

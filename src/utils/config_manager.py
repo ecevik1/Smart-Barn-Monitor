@@ -11,7 +11,8 @@ class ConfigManager:
     def load_full_config() -> Dict:
         default_config = {
             "devices": [],
-            "telegram": {"bot_token": "", "chat_id": ""}
+            "telegram": {"bot_token": "", "chat_id": ""},
+            "gemini": {"api_key": "", "model": "gemini-2.5-flash"}
         }
         
         if not os.path.exists(CONFIG_FILE):
@@ -30,6 +31,7 @@ class ConfigManager:
             # Ensure keys exist
             if "devices" not in data: data["devices"] = []
             if "telegram" not in data: data["telegram"] = {"bot_token": "", "chat_id": ""}
+            if "gemini" not in data: data["gemini"] = {"api_key": "", "model": "gemini-2.5-flash"}
             
             return data
         except Exception as e:
@@ -80,6 +82,17 @@ class ConfigManager:
         full_config = ConfigManager.load_full_config()
         full_config["telegram"]["bot_token"] = bot_token
         full_config["telegram"]["chat_id"] = chat_id
+        return ConfigManager.save_full_config(full_config)
+
+    @staticmethod
+    def get_gemini_config() -> Dict:
+        return ConfigManager.load_full_config()["gemini"]
+        
+    @staticmethod
+    def save_gemini_config(api_key: str, model: str) -> bool:
+        full_config = ConfigManager.load_full_config()
+        full_config["gemini"]["api_key"] = api_key
+        full_config["gemini"]["model"] = model
         return ConfigManager.save_full_config(full_config)
 
     @staticmethod

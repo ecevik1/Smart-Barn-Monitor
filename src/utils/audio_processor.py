@@ -3,6 +3,7 @@ import numpy as np
 import av
 import sounddevice as sd
 from PyQt6.QtCore import QThread, pyqtSignal
+from src.utils.logger import Logger
 
 class AudioProcessor(QThread):
     # Signals for UI updates
@@ -58,93 +59,81 @@ class AudioProcessor(QThread):
                 stream = audio_streams[0]
                 
                 try:
-                    for frame in container.decode(stream):
-                        if not self._run_flag:
-                            break
-                            
-                        now = time.time()
-                    
-                    # 1. Check Cooldown
-                    if now < self.cooldown_until:
-                        self.rms_level_signal.emit(0) # Keep UI bar at 0 during cooldown
-                        continue
+                        for frame in container.decode(stream):
+                            if not self._run_flag:
+                                break
+                                
+                            now = time.time()
                         
-                    # 2. Extract Audio Data
-                    # PyAV frame to numpy array
-                    audio_data = frame.to_ndarray()
-                    
-                    # LIVE PLAYBACK
-                    if not self.is_muted:
-                        try:
-                            if self.stream_audio is None:
-                                channels = len(frame.layout.channels)
-                                self.stream_audio = sd.OutputStream(
-                                    samplerate=frame.sample_rate,
-                                    channels=channels,
-                                    dtype='float32'
-                                )
-                                self.stream_audio.start()
+                            # 1. Check Cooldown
+                            if now < self.cooldown_until:
+                                self.rms_level_signal.emit(0) # Keep UI bar at 0 during cooldown
+                                continue
+                                
+                            # 2. Extract Audio Data
+                            audio_data = frame.to_ndarray()
                             
-                            # av to_ndarray gives shape (channels, samples). sd expects (samples, channels).
-                            # Normalize typical 16-bit to -1.0..1.0 for float32 playback
-                            playback_data = audio_data.astype(np.float32).T / 32768.0
-                            self.stream_audio.write(playback_data)
-                        except Exception as e:
-                            print(f"[AudioProcessor] Playback error: {e}")
-                    else:
-                        if self.stream_audio is not None:
-                            self.stream_audio.stop()
-                            self.stream_audio.close()
-                            self.stream_audio = None
-                    
-                    # 3. Calculate RMS
-                    if audio_data.size > 0:
-                        # RMS = root mean square
-                        # We use float32 to prevent overflow during square sum
-                        data_f32 = audio_data.astype(np.float32)
-                        rms = np.sqrt(np.mean(np.square(data_f32)))
-                        
-                        # Scale to 0-100% 
-                        # Max theoretical RMS for 16-bit PCM is ~23170, but typical loud noises hit 10000-15000
-                        rms_percent = min(int((rms / 12000.0) * 100), 100)
-                        
-                        self.rms_level_signal.emit(rms_percent)
-                        
-                        # 4. Analyze Moo Logic
-                        packet_duration = frame.samples / frame.sample_rate # roughly 0.02 - 0.04 secs
-                        
-                        if rms_percent >= self.sensitivity:
-                            self.high_rms_duration += packet_duration
-                            self.low_rms_duration = 0.0
-                        else:
-                            self.low_rms_duration += packet_duration
+                            # LIVE PLAYBACK
+                            if not self.is_muted:
+                                try:
+                                    if self.stream_audio is None:
+                                        channels = len(frame.layout.channels)
+                                        self.stream_audio = sd.OutputStream(
+                                            samplerate=frame.sample_rate,
+                                            channels=channels,
+                                            dtype='float32'
+                                        )
+                                        self.stream_audio.start()
+                                    
+                                    playback_data = audio_data.astype(np.float32).T / 32768.0
+                                    self.stream_audio.write(playback_data)
+                                except Exception as e:
+                                    print(f"[AudioProcessor] Playback error: {e}")
+                            else:
+                                if self.stream_audio is not None:
+                                    self.stream_audio.stop()
+                                    self.stream_audio.close()
+                                    self.stream_audio = None
                             
-                        # If loud noise continues for >= 2.0 seconds, consider it a moo candidate
-                        # We trigger it once, and then wait for an interruption
-                        if self.high_rms_duration >= 2.0:
-                            self.moo_detected_signal.emit()
-                            self.moo_timestamps.append(now)
-                            # Reset to avoid triggering 100 times per second while still loud
-                            self.high_rms_duration = 0.0 
-                            # We force a small gap logic by resetting, but actual logic 
-                            # requires it to quiet down before registering another.
-                            # So we set low_duration = 0 and will only start accumulating high again 
-                            # if it stays high. A simpler way is just clearing high_duration here.
+                            # 3. Calculate RMS
+                            if audio_data.size > 0:
+                                data_f32 = audio_data.astype(np.float32)
+                                rms = np.sqrt(np.mean(np.square(data_f32)))
+                                
+                                # Scale to 0-100% 
+                                rms_percent = min(int((rms / 12000.0) * 100), 100)
+                                self.rms_level_signal.emit(rms_percent)
+                                
+                                # 4. Analyze Moo Logic
+                                packet_duration = frame.samples / frame.sample_rate 
+                                
+                                if rms_percent >= self.sensitivity:
+                                    self.high_rms_duration += packet_duration
+                                    self.low_rms_duration = 0.0
+                                else:
+                                    self.low_rms_duration += packet_duration
+                                    
+                                if self.high_rms_duration >= 2.0:
+                                    # Log the detection
+                                    Logger.log_sound_event(rms_percent, "Moo (Sound Peak) Detected")
+                                    
+                                    self.moo_detected_signal.emit()
+                                    self.moo_timestamps.append(now)
+                                    self.high_rms_duration = 0.0 
+                                    
+                                if self.low_rms_duration >= 0.5:
+                                    self.high_rms_duration = 0.0
+                                    
+                            # 5. Smart Alarm Logic (3 Moos in 10 Mins)
+                            self.moo_timestamps = [t for t in self.moo_timestamps if (time.time() - t) <= 600]
                             
-                        # If quiet for >0.5s, reset the continuous high noise counter
-                        if self.low_rms_duration >= 0.5:
-                            self.high_rms_duration = 0.0
-                            
-                    # 5. Smart Alarm Logic (3 Moos in 10 Mins)
-                    # Clean up old timestamps (older than 600s = 10m)
-                    self.moo_timestamps = [t for t in self.moo_timestamps if (time.time() - t) <= 600]
-                    
-                    if len(self.moo_timestamps) >= 3:
-                        self.alarm_signal.emit()
-                        # Clear to prevent recursive alarms, wait for 3 NEW moos
-                        self.moo_timestamps.clear()
-                        # Apply default cooldown so it doesn't immediately listen to the alarm
-                        self.set_cooldown(10)
+                            if len(self.moo_timestamps) >= 3:
+                                # Log the alarm
+                                Logger.log("ALARM TRIGGERED: 3 Moos detected in 10 minutes!", "sound_events.log")
+                                
+                                self.alarm_signal.emit()
+                                self.moo_timestamps.clear()
+                                self.set_cooldown(10)
                 finally:
                     if 'container' in locals() and container is not None:
                         container.close()

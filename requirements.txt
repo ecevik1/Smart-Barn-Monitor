@@ -6,3 +6,5 @@ numpy>=1.26.0
 sounddevice>=0.4.6
 onvif-zeep>=0.2.12
 requests>=2.31.0
+google-genai>=1.0.0
+ultralytics>=8.1.0

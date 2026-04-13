@@ -2,8 +2,10 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar, QSlider,
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QPixmap, QImage, QFont
 from src.utils.video_thread import VideoThread
-from src.utils.audio_processor import AudioProcessor # Add this import
-import winsound # Add for alarm sound
+from src.utils.audio_processor import AudioProcessor 
+from src.utils.hybrid_ai_worker import HybridAIWorker
+from src.utils.logger import Logger
+import winsound 
 import os
 
 class VideoWidget(QWidget):
@@ -86,6 +88,7 @@ class VideoWidget(QWidget):
         self.thread = VideoThread(rtsp_url)
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.status_signal.connect(self.update_status)
+        self.thread.anomaly_signal.connect(lambda img: self.trigger_ai_analysis(img, "Görsel Anomali (İnsan/Köpek)"))
         self.thread.start()
         
         # Start Audio Processor
@@ -110,6 +113,11 @@ class VideoWidget(QWidget):
             self.audio_thread.stop()
             self.old_threads.append(self.audio_thread)
             self.audio_thread = None
+            
+        # Stop any active AI workers
+        if hasattr(self, 'ai_worker') and self.ai_worker and self.ai_worker.isRunning():
+            self.ai_worker.terminate()
+            self.ai_worker = None
             
         # Clean up finished old threads gracefully
         self.old_threads = [t for t in self.old_threads if t.isRunning()]
@@ -170,6 +178,27 @@ class VideoWidget(QWidget):
                 
             # Stop alarm visual after 10 seconds
             QTimer.singleShot(10000, self.stop_alarm)
+            
+            # TRIGGER AI ANALYSIS FOR SOUND
+            if self.thread and self.thread.latest_frame is not None:
+                self.trigger_ai_analysis(self.thread.latest_frame, "Ses Anomalisi (Moo Sesi)")
+            else:
+                Logger.log("Ses alarmı tetiklendi ancak görüntü alınamadığı için AI analizi atlandı.", "app_events.log")
+
+    def trigger_ai_analysis(self, cv_img, reason):
+        """Starts a modular AI worker for Gemini analysis and Telegram notification."""
+        if hasattr(self, 'ai_worker') and self.ai_worker and self.ai_worker.isRunning():
+            Logger.log(f"AI Analizi zaten çalışıyor. Yeni talep ({reason}) atlandı.", "app_events.log")
+            return
+            
+        Logger.log(f"AI Analizi başlatılıyor: {reason}", "app_events.log")
+        
+        self.ai_worker = HybridAIWorker(cv_img, trigger_reason=reason)
+        # Connect signals for status feedback if needed
+        self.ai_worker.status_signal.connect(lambda msg: print(f"[AI] {msg}"))
+        self.ai_worker.error_signal.connect(lambda err: Logger.log(f"AI Hatası: {err}", "app_events.log"))
+        self.ai_worker.success_signal.connect(lambda msg: Logger.log(f"AI Başarılı: {msg}", "app_events.log"))
+        self.ai_worker.start()
 
     def stop_alarm(self):
         self.alarm_active = False

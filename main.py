@@ -1,15 +1,10 @@
 import sys
 import os
-
-# Ensure the root directory is accessible to imports
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
+import traceback
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
 from src.ui.main_window import MainWindow
 from src.ui.theme import DARK_THEME_QSS
-import traceback
-import os
 
 def global_exception_handler(exctype, value, tb):
     """
@@ -28,6 +23,16 @@ def global_exception_handler(exctype, value, tb):
 
 sys.excepthook = global_exception_handler
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 def main():
     """
     Main entry point for the Smart Barn Monitor application.
@@ -45,9 +50,14 @@ def main():
     app.setStyleSheet(DARK_THEME_QSS)
     
     # Set application icon
-    icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'assets', 'icon.png'))
+    icon_path = resource_path(os.path.join('assets', 'icon.png'))
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
+    else:
+        # Fallback for development if assets is in root
+        dev_icon_path = os.path.join(os.getcwd(), 'assets', 'icon.png')
+        if os.path.exists(dev_icon_path):
+            app.setWindowIcon(QIcon(dev_icon_path))
     
     # Show main window
     window = MainWindow()

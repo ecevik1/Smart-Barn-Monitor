@@ -13,6 +13,7 @@ from src.ui.video_widget import VideoWidget
 from src.ui.ptz_panel import PTZPanel
 from src.utils.ptz_manager import PTZManager
 from src.ui.telegram_dialog import TelegramDialog
+from src.ui.gemini_dialog import GeminiDialog
 
 # Custom Flow Layout for grid-like alignment that wraps
 # We could implement a real FlowLayout, but a grid or vertical list of grids is easier
@@ -52,8 +53,18 @@ class MainWindow(QMainWindow):
         self.btn_add.setFixedSize(180, 40)
         self.btn_add.clicked.connect(self.open_add_dialog)
         
+        # Gemini Settings Button
+        self.btn_gemini = QPushButton(" ✨ Gemini")
+        self.btn_gemini.setFixedSize(120, 40)
+        self.btn_gemini.setStyleSheet("background-color: #8E44AD; color: white; font-weight: bold; border-radius: 4px;")
+        self.btn_gemini.clicked.connect(self.open_gemini_dialog)
+        
+        self.lbl_gemini_warning = QLabel("❗")
+        self.lbl_gemini_warning.setStyleSheet("color: #f44336; font-size: 20px; font-weight: bold;")
+        self.lbl_gemini_warning.setToolTip("Lütfen Gemini ayarlarını yapın")
+        
         # Telegram Settings Button
-        self.btn_telegram = QPushButton(" Telegram")
+        self.btn_telegram = QPushButton(" 📢 Telegram")
         self.btn_telegram.setFixedSize(140, 40)
         self.btn_telegram.setStyleSheet("background-color: #2AABEE; color: white; font-weight: bold; border-radius: 4px;")
         self.btn_telegram.clicked.connect(self.open_telegram_dialog)
@@ -64,6 +75,8 @@ class MainWindow(QMainWindow):
         
         header_layout.addWidget(self.title_label)
         header_layout.addStretch()
+        header_layout.addWidget(self.lbl_gemini_warning)
+        header_layout.addWidget(self.btn_gemini)
         header_layout.addWidget(self.lbl_telegram_warning)
         header_layout.addWidget(self.btn_telegram)
         header_layout.addWidget(self.btn_add)
@@ -111,17 +124,28 @@ class MainWindow(QMainWindow):
         if dialog.exec():
             self.load_devices() # Refresh list if saved
 
+    def open_gemini_dialog(self):
+        dialog = GeminiDialog(self)
+        if dialog.exec():
+            self.check_telegram_settings() # It will check both
+
     def open_telegram_dialog(self):
         dialog = TelegramDialog(self)
         if dialog.exec():
             self.check_telegram_settings()
 
     def check_telegram_settings(self):
-        conf = ConfigManager.get_telegram_config()
-        if not conf.get("bot_token") or not conf.get("chat_id"):
+        t_conf = ConfigManager.get_telegram_config()
+        if not t_conf.get("bot_token") or not t_conf.get("chat_id"):
             self.lbl_telegram_warning.show()
         else:
             self.lbl_telegram_warning.hide()
+            
+        g_conf = ConfigManager.get_gemini_config()
+        if not g_conf.get("api_key"):
+            self.lbl_gemini_warning.show()
+        else:
+            self.lbl_gemini_warning.hide()
 
     def toggle_fullscreen(self, is_fullscreen: bool):
         if is_fullscreen:
