@@ -50,12 +50,11 @@ def main():
     app.setStyleSheet(DARK_THEME_QSS)
     
     # Set application icon
-    icon_path = resource_path(os.path.join('assets', 'icon.png'))
+    icon_path = resource_path(os.path.join('assets', 'icons', 'icon.png'))
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
     else:
-        # Fallback for development if assets is in root
-        dev_icon_path = os.path.join(os.getcwd(), 'assets', 'icon.png')
+        dev_icon_path = os.path.join(os.getcwd(), 'assets', 'icons', 'icon.png')
         if os.path.exists(dev_icon_path):
             app.setWindowIcon(QIcon(dev_icon_path))
     

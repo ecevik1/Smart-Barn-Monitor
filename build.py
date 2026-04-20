@@ -13,7 +13,7 @@ PyInstaller.__main__.run([
     '--onedir', 
     '--noconfirm',
     '--clean',
-    '--icon=assets/icon.png',
+    '--icon=assets/icons/icon.png',
     '--add-data=assets;assets',
     f'--add-data={wsdl_path};wsdl'
 ])
